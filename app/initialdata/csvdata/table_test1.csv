@@ -1,0 +1,6 @@
+status,status_desc,status_level,color_code
+OK,Everything is normal,0,green
+AWAIT_REGISTERED,Status for waiting registration process,20,yellow
+JOIN_REQUEST_PENDING,New user request to Join,10,yellow
+LOW_CREDIT,The credit amount is low,30,yellow
+NOT_ENOUGH_CREDIT,The credit amount is not enough,80,red
