@@ -1,5 +1,5 @@
 {
-    "name": "selenium-py3",
+    "name": "CscDataLoader-py3",
     "image": "python:3.9",
     // "shutdownAction": "none",
     "shutdownAction": "stopContainer",
