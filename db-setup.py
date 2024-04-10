@@ -9,7 +9,6 @@ POSTGRES_DM_PASSWORD = os.getenv("POSTGRES_DM_PASSWORD")
 
 class Psycopg2Driver:
     def __init__(self, username:str, password:str, host_addr:str, port:str, database_name:str) -> None:
-        self._machine_id = "machine123"
         self.database_name = database_name
         self.host_addr = host_addr
         self.port = port
