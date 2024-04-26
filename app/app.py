@@ -1,6 +1,8 @@
 import csv
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, select
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, select, Boolean
 from sqlalchemy.engine import URL
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 import os
 
 
@@ -8,6 +10,16 @@ POSTGRES_DB_ADDRESS = os.getenv("POSTGRES_DB_ADDRESS", "localhost")
 POSTGRES_DB_PORT = os.getenv("POSTGRES_DB_PORT", "5432")
 POSTGRES_DM_USERNAME = os.getenv("POSTGRES_DM_USERNAME")
 POSTGRES_DM_PASSWORD = os.getenv("POSTGRES_DM_PASSWORD")
+
+Base = declarative_base()
+class ChildDm(Base):
+    __tablename__ = "child_dm"
+
+    id = Column(Integer, primary_key=True, index=True)
+    parent_id = Column(Integer)
+    row_name = Column(String)
+    row_desc = Column(String)
+    flag = Column(Boolean)
    
 
 class Whatever:
@@ -37,6 +49,7 @@ class Whatever:
                 Column('color_code', String)
             )
         }
+        self.last_id = None
 
     def insert_csv_data_to_table(self, table_name, csv_file_path):
         if table_name in self.defined_tables_dict.keys():
@@ -46,12 +59,23 @@ class Whatever:
                     print(f"inserting data - {row}")
                     self.engine.execute(self.defined_tables_dict[table_name].insert().values(**row))
 
+    def insert_row_to_table(self):
+        new_id = self.last_id + 1
+        new_row = ChildDm(id=new_id, parent_id=3, row_name=f"row_{new_id}", row_desc=f"row_{new_id} description", flag=True)
+        _temp_session = sessionmaker(bind=self.engine)
+        _temp_session_for_table = _temp_session()
+        _temp_session_for_table.add(new_row)
+        _temp_session_for_table.commit()
+        _temp_session_for_table.close()
+
     def fetch_all_from_table(self, table_name):
         # Reflect the existing table structure
         existing_table = Table(table_name, self.metadata, autoload_with=self.engine)
 
+        select_statement = existing_table.select()
+        print(select_statement)
         # Construct a select statement
-        select_statement = select([existing_table])
+        # select_statement = select([existing_table.columns.id])
 
         # Execute the select statement
         with self.engine.connect() as connection:
@@ -59,10 +83,14 @@ class Whatever:
             
             # Iterate over the result set
             for row in result:
+                self.last_id = row.id if self.last_id is None or row.id > self.last_id else self.last_id
                 print(row)  # Process the retrieved data here
+             
 
 if __name__=="__main__":
-    test = Whatever(dialect="postgresql", driver="psycopg2", username=POSTGRES_DM_USERNAME, password=POSTGRES_DM_PASSWORD, host_addr=POSTGRES_DB_ADDRESS, port=POSTGRES_DB_PORT, database_name="testdb")
-    test.insert_csv_data_to_table("table_test1", "app/initialdata/csvdata/table_test1.csv")
-    test.fetch_all_from_table("table_test1")
+    test = Whatever(dialect="postgresql", driver="psycopg2", username=POSTGRES_DM_USERNAME, password=POSTGRES_DM_PASSWORD, host_addr=POSTGRES_DB_ADDRESS, port=POSTGRES_DB_PORT, database_name="testing")
+    # test.insert_csv_data_to_table("table_test1", "app/initialdata/csvdata/table_test1.csv")
+    test.fetch_all_from_table("child_dm")
+    test.insert_row_to_table()
+    test.fetch_all_from_table("child_dm")
     
