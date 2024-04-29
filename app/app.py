@@ -1,7 +1,7 @@
 import csv
 from sqlalchemy import ForeignKey, create_engine, MetaData, Table, Column, Integer, DECIMAL, String, select, Boolean
 from sqlalchemy.engine import URL
-from sqlalchemy.orm import sessionmaker, relationship, declarative_base
+from sqlalchemy.orm import sessionmaker, relationship, declarative_base, DeclarativeBase
 import os
 
 
@@ -10,7 +10,11 @@ POSTGRES_DB_PORT = os.getenv("POSTGRES_DB_PORT", "5432")
 POSTGRES_DM_USERNAME = os.getenv("POSTGRES_DM_USERNAME")
 POSTGRES_DM_PASSWORD = os.getenv("POSTGRES_DM_PASSWORD")
 
-Base = declarative_base()
+# Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
+
 class ChildDm(Base):
     __tablename__ = "child_dm"
 
@@ -93,9 +97,10 @@ class Whatever:
                     print(f"inserting data - {row}")
                     self.engine.execute(self.defined_tables_dict[table_name].insert().values(**row))
 
-    def insert_row_to_table(self):
+    def insert_row_to_child_table(self):
+        self.fetch_all_from_table("child_dm")
         new_id = self.last_id + 1
-        new_row = ChildDm(id=new_id, parent_id=3, row_name=f"row_{new_id}", row_desc=f"row_{new_id} description", flag=True)
+        new_row = ChildDm(id=new_id, child_number_enum_id=3, parent_id=3, row_name=f"row_{new_id}", row_desc=f"row_{new_id} description", flag=True)
         _temp_session = sessionmaker(bind=self.engine)
         _temp_session_for_table = _temp_session()
         _temp_session_for_table.add(new_row)
@@ -118,7 +123,7 @@ class Whatever:
                     print("Not Found")
         elif grandparent_id is not None:
             if parent_id is not None and child_number is not None:
-                results = _temp_session_for_table.query(ChildDm).join(ParentDm, ParentDm.id == ChildDm.parent_id).join(GrandParentDm, ParentDm.grandparent_id == GrandParentDm.id).join(ChildNumberEnumDm, ChildNumberEnumDm.id == ChildDm.child_number_enum_id).filter(GrandParentDm.id == grandparent_id).filter(ParentDm.id == parent_id).filter(ChildNumberEnumDm.id == child_number).all()
+                results = _temp_session_for_table.query(ChildDm).join(ParentDm, ParentDm.id == ChildDm.parent_id).join(GrandParentDm, ParentDm.grandparent_id == GrandParentDm.id).join(ChildNumberEnumDm, ChildNumberEnumDm.id == ChildDm.child_number_enum_id).filter((ParentDm.id == parent_id) & (GrandParentDm.id == grandparent_id) & (ChildNumberEnumDm.id == child_number)).all()
             elif parent_id is not None:
                 results = _temp_session_for_table.query(ChildDm).join(ParentDm, ParentDm.id == ChildDm.parent_id).join(GrandParentDm, GrandParentDm.id == ParentDm.grandparent_id).filter(GrandParentDm.id == grandparent_id).filter(ParentDm.id == parent_id).all()
             elif child_number is not None:
@@ -195,8 +200,6 @@ class Whatever:
 if __name__=="__main__":
     test = Whatever(dialect="postgresql", driver="psycopg2", username=POSTGRES_DM_USERNAME, password=POSTGRES_DM_PASSWORD, host_addr=POSTGRES_DB_ADDRESS, port=POSTGRES_DB_PORT, database_name="testing")
     # test.insert_csv_data_to_table("table_test1", "app/initialdata/csvdata/table_test1.csv")
-    test.fetch_child_info(child_number=2)
-    # test.fetch_all_from_table("child_dm")
-    # test.insert_row_to_table()
-    # test.fetch_all_from_table("child_dm")
+    test.fetch_child_info(grandparent_id=2, parent_id=2, child_number=1)
+    test.insert_row_to_child_table()
     
