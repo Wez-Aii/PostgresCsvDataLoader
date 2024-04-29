@@ -1,8 +1,7 @@
 import csv
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, select, Boolean
+from sqlalchemy import ForeignKey, create_engine, MetaData, Table, Column, Integer, DECIMAL, String, select, Boolean
 from sqlalchemy.engine import URL
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, relationship, declarative_base
 import os
 
 
@@ -16,10 +15,45 @@ class ChildDm(Base):
     __tablename__ = "child_dm"
 
     id = Column(Integer, primary_key=True, index=True)
-    parent_id = Column(Integer)
+    parent_id = Column(Integer, ForeignKey("parent_dm.id"))
+    child_number_enum_id = Column(Integer, ForeignKey("child_number_enum_dm.id"))
     row_name = Column(String)
     row_desc = Column(String)
     flag = Column(Boolean)
+    parent = relationship("ParentDm", back_populates="childs")
+    child_number = relationship("ChildNumberEnumDm", back_populates="child")
+
+class ParentDm(Base):
+    __tablename__ = "parent_dm"
+
+    id = Column(Integer, primary_key=True, index=True)
+    grandparent_id = Column(Integer, ForeignKey("grandparent_dm.id"))
+    row_name = Column(String)
+    row_desc = Column(String)
+    int_val = Column(Integer)
+    decimal_val = Column(DECIMAL)
+    flag = Column(Boolean)
+    parent = relationship("GrandParentDm", back_populates="childs")
+    childs = relationship("ChildDm", back_populates="parent")
+
+class GrandParentDm(Base):
+    __tablename__ = "grandparent_dm"
+
+    id = Column(Integer, primary_key=True, index=True)
+    row_name = Column(String)
+    row_desc = Column(String)
+    int_val = Column(Integer)
+    decimal_val = Column(DECIMAL)
+    flag = Column(Boolean)
+    childs = relationship("ParentDm", back_populates="parent")
+
+class ChildNumberEnumDm(Base):
+    __tablename__ = "child_number_enum_dm"
+
+    id = Column(Integer, primary_key=True, index=True)
+    number_desc = Column(String)
+
+    child = relationship("ChildDm", back_populates="child_number")
    
 
 class Whatever:
@@ -68,6 +102,77 @@ class Whatever:
         _temp_session_for_table.commit()
         _temp_session_for_table.close()
 
+    def fetch_child_info(self, child_id:int=None, parent_id:int=None, child_number:int=None, grandparent_id:int=None):
+        _temp_session = sessionmaker(bind=self.engine)
+        _temp_session_for_table = _temp_session()
+        if child_id is not None:
+            results = _temp_session_for_table.query(ChildDm).filter(ChildDm.id == child_id).all()
+            for result in results:
+                if result:
+                    print("child name", result.row_name)
+                    print("child id", result.id)
+                    print("child parent id", result.parent.id)
+                    print("child grandparent id", result.parent.parent.id)
+                    print("child number", result.child_number.number_desc)
+                else:
+                    print("Not Found")
+        elif grandparent_id is not None:
+            if parent_id is not None and child_number is not None:
+                results = _temp_session_for_table.query(ChildDm).join(ParentDm, ParentDm.id == ChildDm.parent_id).join(GrandParentDm, ParentDm.grandparent_id == GrandParentDm.id).join(ChildNumberEnumDm, ChildNumberEnumDm.id == ChildDm.child_number_enum_id).filter(GrandParentDm.id == grandparent_id).filter(ParentDm.id == parent_id).filter(ChildNumberEnumDm.id == child_number).all()
+            elif parent_id is not None:
+                results = _temp_session_for_table.query(ChildDm).join(ParentDm, ParentDm.id == ChildDm.parent_id).join(GrandParentDm, GrandParentDm.id == ParentDm.grandparent_id).filter(GrandParentDm.id == grandparent_id).filter(ParentDm.id == parent_id).all()
+            elif child_number is not None:
+                results = _temp_session_for_table.query(ChildDm).join(ParentDm, ParentDm.id == ChildDm.parent_id).join(GrandParentDm, GrandParentDm.id == ParentDm.grandparent_id).join(ChildNumberEnumDm, ChildNumberEnumDm.id == ChildDm.child_number_enum_id).filter(GrandParentDm.id == grandparent_id).filter(ChildNumberEnumDm.id == child_number).all()
+            else:
+                results = _temp_session_for_table.query(ChildDm).join(ParentDm, ParentDm.id == ChildDm.parent_id).join(GrandParentDm, ParentDm.grandparent_id == GrandParentDm.id).filter(GrandParentDm.id == grandparent_id).all()
+            for result in results:
+                if result:
+                    print("child name", result.row_name)
+                    print("child id", result.id)
+                    print("child parent id", result.parent.id)
+                    print("child grandparent id", result.parent.parent.id)
+                    print("child number", result.child_number.number_desc)
+                else:
+                    print("Not Found.")
+        elif parent_id is not None:
+            if child_number is not None:
+                results = _temp_session_for_table.query(ChildDm).join(ParentDm, ParentDm.id == ChildDm.parent_id).join(ChildNumberEnumDm, ChildNumberEnumDm.id == ChildDm.child_number_enum_id).filter(ParentDm.id == parent_id).filter(ChildNumberEnumDm.id == child_number).all()
+            else:
+                results = _temp_session_for_table.query(ChildDm).join(ParentDm, ParentDm.id == ChildDm.parent_id).join(GrandParentDm, ParentDm.grandparent_id == GrandParentDm.id).filter(ParentDm.id == parent_id).all()
+            for result in results:
+                if result:
+                    print("child name", result.row_name)
+                    print("child id", result.id)
+                    print("child parent id", result.parent.id)
+                    print("child grandparent id", result.parent.parent.id)
+                    print("child number", result.child_number.number_desc)
+                else:
+                    print("Not Found.")
+            
+        elif child_number is not None:
+            results = _temp_session_for_table.query(ChildDm).join(ChildNumberEnumDm, ChildNumberEnumDm.id == ChildDm.child_number_enum_id).filter(ChildNumberEnumDm.id == child_number).all()
+            for result in results:
+                if result:
+                    print("child name", result.row_name)
+                    print("child id", result.id)
+                    print("child parent id", result.parent.id)
+                    print("child grandparent id", result.parent.parent.id)
+                    print("child number", result.child_number.number_desc)
+                else:
+                    print("Not Found.")
+        else:
+            results = _temp_session_for_table.query(ChildDm).all()
+            for result in results:
+                if result:
+                    print("child name", result.row_name)
+                    print("child id", result.id)
+                    print("child parent id", result.parent.id)
+                    print("child grandparent id", result.parent.parent.id)
+                    print("child number", result.child_number.number_desc)
+                else:
+                    print("Not Found.")
+        _temp_session_for_table.close()
+
     def fetch_all_from_table(self, table_name):
         # Reflect the existing table structure
         existing_table = Table(table_name, self.metadata, autoload_with=self.engine)
@@ -90,7 +195,8 @@ class Whatever:
 if __name__=="__main__":
     test = Whatever(dialect="postgresql", driver="psycopg2", username=POSTGRES_DM_USERNAME, password=POSTGRES_DM_PASSWORD, host_addr=POSTGRES_DB_ADDRESS, port=POSTGRES_DB_PORT, database_name="testing")
     # test.insert_csv_data_to_table("table_test1", "app/initialdata/csvdata/table_test1.csv")
-    test.fetch_all_from_table("child_dm")
-    test.insert_row_to_table()
-    test.fetch_all_from_table("child_dm")
+    test.fetch_child_info(child_number=2)
+    # test.fetch_all_from_table("child_dm")
+    # test.insert_row_to_table()
+    # test.fetch_all_from_table("child_dm")
     
