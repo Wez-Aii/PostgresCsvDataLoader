@@ -1,4 +1,5 @@
-from sqlalchemy import ForeignKey, create_engine, MetaData, Table, Column, Integer, DECIMAL, String, select, Boolean
+from datetime import datetime, timezone
+from sqlalchemy import TIMESTAMP, ForeignKey, create_engine, MetaData, Table, Column, Integer, DECIMAL, String, select, Boolean
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base, DeclarativeBase
 import os
@@ -54,7 +55,7 @@ class ChildDm(Base, CRUD):
         self.flag = flag
     
 
-class ParentDm(Base):
+class ParentDm(Base, CRUD):
     __tablename__ = "parent_dm"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -64,8 +65,18 @@ class ParentDm(Base):
     int_val = Column(Integer)
     decimal_val = Column(DECIMAL)
     flag = Column(Boolean)
+    timestamp = Column(TIMESTAMP)
     parent = relationship("GrandParentDm", back_populates="childs")
     childs = relationship("ChildDm", back_populates="parent")
+
+    def __init__(self, grandparent_id, row_name, row_desc, int_val, decimal_val, flag, timestamp):
+        self.grandparent_id = grandparent_id
+        self.row_name = row_name
+        self.row_desc = row_desc
+        self.int_val = int_val
+        self.decimal_val = decimal_val
+        self.flag = flag
+        self.timestamp = timestamp
 
 class GrandParentDm(Base):
     __tablename__ = "grandparent_dm"
@@ -133,6 +144,15 @@ class Testing:
         self._current_new_row.destroy(_temp_session_for_table)
         _temp_session_for_table.close()
 
+    def insert_row_to_parent_table(self):
+        self.fetch_all_from_table("parent_dm")
+        new_id = self.last_id + 1
+        self._current_new_row = ParentDm(grandparent_id=2, row_name=f"row_{new_id}", row_desc=f"row_{new_id} description", int_val=1234, decimal_val=123.456,flag=False, timestamp=datetime.now(timezone.utc))
+        _temp_session = sessionmaker(bind=self.engine)
+        _temp_session_for_table = _temp_session()
+        self._current_new_row.save(_temp_session_for_table)
+        _temp_session_for_table.close()
+
     def fetch_all_from_table(self, table_name):
         # Reflect the existing table structure
         existing_table = Table(table_name, self.metadata, autoload_with=self.engine)
@@ -150,7 +170,10 @@ class Testing:
 
 if __name__=="__main__":
     test = Testing(dialect="postgresql", driver="psycopg2", username=POSTGRES_DM_USERNAME, password=POSTGRES_DM_PASSWORD, host_addr=POSTGRES_DB_ADDRESS, port=POSTGRES_DB_PORT, database_name="testing")
-    test.insert_row_to_child_table()
-    test.delete_current_row_from_child_table()
-    test.fetch_all_from_table("child_dm")
+    # test.insert_row_to_child_table()
+    # test.delete_current_row_from_child_table()
+    # test.fetch_all_from_table("child_dm")
+
+    test.insert_row_to_parent_table()
+    test.fetch_all_from_table("parent_dm")
     

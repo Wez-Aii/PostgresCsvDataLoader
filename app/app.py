@@ -162,6 +162,7 @@ class Whatever:
                     print("child parent id", result.parent.id)
                     print("child grandparent id", result.parent.parent.id)
                     print("child number", result.child_number.number_desc)
+                    print(type(result.parent.decimal_val),"parent decimal value", result.parent.decimal_val)
                     print(type(result.timestamp),"child row recorded at",result.timestamp)
                 else:
                     print("Not Found.")
@@ -170,6 +171,7 @@ class Whatever:
                 dt_str = datetime_to_string(_datetime_now)
                 print(type(dt_str),"new timestamp str",dt_str)
                 _new_timestamp = string_to_datetime(dt_str)
+                result.parent.decimal_val = 654.88
                 result.timestamp = _new_timestamp
                 _temp_session_for_table.commit()
             
