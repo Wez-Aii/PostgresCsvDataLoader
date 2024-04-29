@@ -1,5 +1,6 @@
 import csv
-from sqlalchemy import ForeignKey, create_engine, MetaData, Table, Column, Integer, DECIMAL, String, select, Boolean
+from datetime import datetime, timezone
+from sqlalchemy import ForeignKey, create_engine, MetaData, Table, Column, Integer, DECIMAL, String, select, Boolean, TIMESTAMP
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import sessionmaker, relationship, declarative_base, DeclarativeBase
 import os
@@ -24,6 +25,7 @@ class ChildDm(Base):
     row_name = Column(String)
     row_desc = Column(String)
     flag = Column(Boolean)
+    timestamp = Column(TIMESTAMP)
     parent = relationship("ParentDm", back_populates="childs")
     child_number = relationship("ChildNumberEnumDm", back_populates="child")
 
@@ -59,6 +61,15 @@ class ChildNumberEnumDm(Base):
 
     child = relationship("ChildDm", back_populates="child_number")
    
+
+
+# Function to convert datetime object to string
+def datetime_to_string(dt_obj):
+    return dt_obj.strftime("%Y-%m-%d %H:%M:%S.%f%z")
+
+# Function to convert string to datetime object
+def string_to_datetime(dt_str):
+    return datetime.strptime(dt_str, "%Y-%m-%d %H:%M:%S.%f%z")
 
 class Whatever:
     def __init__(self, dialect:str, driver:str, username:str, password:str, host_addr:str, port:str, database_name:str) -> None:
@@ -151,8 +162,16 @@ class Whatever:
                     print("child parent id", result.parent.id)
                     print("child grandparent id", result.parent.parent.id)
                     print("child number", result.child_number.number_desc)
+                    print(type(result.timestamp),"child row recorded at",result.timestamp)
                 else:
                     print("Not Found.")
+                _datetime_now = datetime.now(timezone.utc)
+                print(type(_datetime_now),"new timestamp",_datetime_now)
+                dt_str = datetime_to_string(_datetime_now)
+                print(type(dt_str),"new timestamp str",dt_str)
+                _new_timestamp = string_to_datetime(dt_str)
+                result.timestamp = _new_timestamp
+                _temp_session_for_table.commit()
             
         elif child_number is not None:
             results = _temp_session_for_table.query(ChildDm).join(ChildNumberEnumDm, ChildNumberEnumDm.id == ChildDm.child_number_enum_id).filter(ChildNumberEnumDm.id == child_number).all()
@@ -200,6 +219,6 @@ class Whatever:
 if __name__=="__main__":
     test = Whatever(dialect="postgresql", driver="psycopg2", username=POSTGRES_DM_USERNAME, password=POSTGRES_DM_PASSWORD, host_addr=POSTGRES_DB_ADDRESS, port=POSTGRES_DB_PORT, database_name="testing")
     # test.insert_csv_data_to_table("table_test1", "app/initialdata/csvdata/table_test1.csv")
-    test.fetch_child_info(grandparent_id=2, parent_id=2, child_number=1)
-    test.insert_row_to_child_table()
+    test.fetch_child_info(parent_id=2, child_number=1)
+    # test.insert_row_to_child_table()
     
