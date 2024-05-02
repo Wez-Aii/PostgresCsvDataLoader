@@ -27,7 +27,8 @@ class ChildDm(Base):
     flag = Column(Boolean)
     timestamp = Column(TIMESTAMP)
     parent = relationship("ParentDm", back_populates="childs")
-    child_number = relationship("ChildNumberEnumDm", back_populates="child")
+    child_number = relationship("ChildNumberEnumDm")
+    # child_number = relationship("ChildNumberEnumDm", back_populates="child")
 
 class ParentDm(Base):
     __tablename__ = "parent_dm"
@@ -59,7 +60,7 @@ class ChildNumberEnumDm(Base):
     id = Column(Integer, primary_key=True, index=True)
     number_desc = Column(String)
 
-    child = relationship("ChildDm", back_populates="child_number")
+    # child = relationship("ChildDm", back_populates="child_number")
    
 
 
@@ -166,14 +167,14 @@ class Whatever:
                     print(type(result.timestamp),"child row recorded at",result.timestamp)
                 else:
                     print("Not Found.")
-                _datetime_now = datetime.now(timezone.utc)
-                print(type(_datetime_now),"new timestamp",_datetime_now)
-                dt_str = datetime_to_string(_datetime_now)
-                print(type(dt_str),"new timestamp str",dt_str)
-                _new_timestamp = string_to_datetime(dt_str)
-                result.parent.decimal_val = 654.88
-                result.timestamp = _new_timestamp
-                _temp_session_for_table.commit()
+                # _datetime_now = datetime.now(timezone.utc)
+                # print(type(_datetime_now),"new timestamp",_datetime_now)
+                # dt_str = datetime_to_string(_datetime_now)
+                # print(type(dt_str),"new timestamp str",dt_str)
+                # _new_timestamp = string_to_datetime(dt_str)
+                # result.parent.decimal_val = 654.88
+                # result.timestamp = _new_timestamp
+                # _temp_session_for_table.commit()
             
         elif child_number is not None:
             results = _temp_session_for_table.query(ChildDm).join(ChildNumberEnumDm, ChildNumberEnumDm.id == ChildDm.child_number_enum_id).filter(ChildNumberEnumDm.id == child_number).all()
@@ -221,6 +222,6 @@ class Whatever:
 if __name__=="__main__":
     test = Whatever(dialect="postgresql", driver="psycopg2", username=POSTGRES_DM_USERNAME, password=POSTGRES_DM_PASSWORD, host_addr=POSTGRES_DB_ADDRESS, port=POSTGRES_DB_PORT, database_name="testing")
     # test.insert_csv_data_to_table("table_test1", "app/initialdata/csvdata/table_test1.csv")
-    test.fetch_child_info(parent_id=2, child_number=1)
+    test.fetch_child_info(parent_id=2, child_number=2)
     # test.insert_row_to_child_table()
     

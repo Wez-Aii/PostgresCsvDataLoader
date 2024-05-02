@@ -27,6 +27,10 @@ class CRUD():
     def destroy(self, db_session):
         db_session.delete(self)
         return db_session.commit()
+    
+    def get_id(self, db_session):
+        db_session.refresh(self)
+        print(self.id)
         
     # def destroy_row(self, db_session, row_id):
     #     result = db_session.query(ChildDm).filter(ChildDm.id == row_id).first()
@@ -135,6 +139,7 @@ class Testing:
         _temp_session = sessionmaker(bind=self.engine)
         _temp_session_for_table = _temp_session()
         self._current_new_row.save(_temp_session_for_table)
+        self._current_new_row.get_id(_temp_session_for_table)
         _temp_session_for_table.close()
 
     def delete_current_row_from_child_table(self):
@@ -170,10 +175,10 @@ class Testing:
 
 if __name__=="__main__":
     test = Testing(dialect="postgresql", driver="psycopg2", username=POSTGRES_DM_USERNAME, password=POSTGRES_DM_PASSWORD, host_addr=POSTGRES_DB_ADDRESS, port=POSTGRES_DB_PORT, database_name="testing")
-    # test.insert_row_to_child_table()
+    test.insert_row_to_child_table()
     # test.delete_current_row_from_child_table()
-    # test.fetch_all_from_table("child_dm")
+    test.fetch_all_from_table("child_dm")
 
-    test.insert_row_to_parent_table()
-    test.fetch_all_from_table("parent_dm")
+    # test.insert_row_to_parent_table()
+    # test.fetch_all_from_table("parent_dm")
     
